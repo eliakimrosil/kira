@@ -312,62 +312,54 @@ async def send_audio(session, mic_stream, mic_active):
 
 async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=True):
     """Receive audio and handle tool calls."""
-    try:
-        async for message in session.receive():
-            # Debug logging
-            msg_type = "unknown"
-            if message.server_content: msg_type = "server_content"
-            if message.tool_call: msg_type = "tool_call"
-            if message.setup: msg_type = "setup"
-            
-            with open(LOG_FILE, "a") as f:
-                f.write(f"[{time.strftime('%H:%M:%S')}] Msg: {msg_type} | Mic: {mic_active.is_set()}\n")
-            
-            # Handle Audio Output
-            if message.server_content:
-                if message.server_content.model_turn:
-                    mic_active.clear() # Stop listening while Kira speaks
-                    live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
-                    parts = message.server_content.model_turn.parts
-                    for part in parts:
-                        if part.inline_data:
-                            await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+    while True:
+        try:
+            async for message in session.receive():
+                # Handle Audio Output
+                if message.server_content:
+                    if message.server_content.model_turn:
+                        mic_active.clear() # Stop listening while Kira speaks
+                        live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
+                        parts = message.server_content.model_turn.parts
+                        for part in parts:
+                            if part.inline_data:
+                                await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+                    
+                    if message.server_content.turn_complete:
+                        # Briefly stay muted after speaking to avoid immediate feedback
+                        await asyncio.sleep(0.2)
+                        mic_active.set() # Resume listening
+                        live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
                 
-                if message.server_content.turn_complete:
-                    # Briefly stay muted after speaking to avoid immediate feedback
-                    await asyncio.sleep(0.2)
-                    mic_active.set() # Resume listening
-                    live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
-            
-            # Handle Tool Calls
-            if message.tool_call:
-                mic_active.clear() # Mute during command execution
-                responses = []
-                for call in message.tool_call.function_calls:
-                    if call.name == "run_command":
-                        cmd = call.args.get("command")
-                        live_ui.update(Panel(f"[bold yellow]Executing:[/bold yellow] {cmd}", title="kira Live"))
-                        res = run_command(cmd)
-                        responses.append(
-                            types.FunctionResponse(
-                                name=call.name,
-                                id=call.id,
-                                response={"output": f"STDOUT: {res['stdout']}\nSTDERR: {res['stderr']}"}
+                # Handle Tool Calls
+                if message.tool_call:
+                    mic_active.clear() # Mute during command execution
+                    responses = []
+                    for call in message.tool_call.function_calls:
+                        if call.name == "run_command":
+                            cmd = call.args.get("command")
+                            live_ui.update(Panel(f"[bold yellow]Executing:[/bold yellow] {cmd}", title="kira Live"))
+                            res = run_command(cmd)
+                            responses.append(
+                                types.FunctionResponse(
+                                    name=call.name,
+                                    id=call.id,
+                                    response={"output": f"STDOUT: {res['stdout']}\nSTDERR: {res['stderr']}"}
+                                )
                             )
+                    
+                    if responses:
+                        live_ui.update(Panel("[bold magenta]Processing results...[/bold magenta]", title="kira Live"))
+                        await session.send(
+                            input=types.LiveClientToolResponse(function_responses=responses)
                         )
-                
-                if responses:
-                    live_ui.update(Panel("[bold magenta]Processing results...[/bold magenta]", title="kira Live"))
-                    await session.send(
-                        input=types.LiveClientToolResponse(function_responses=responses)
-                    )
-                else:
-                    # If no tools were actually run, re-enable mic
-                    mic_active.set()
-    except Exception as e:
-        with open(LOG_FILE, "a") as f:
-            f.write(f"[{time.strftime('%H:%M:%S')}] receive_and_handle error: {e}\n")
-        mic_active.set() # Try to recover listening state if possible
+                    else:
+                        mic_active.set()
+        except Exception as e:
+            with open(LOG_FILE, "a") as f:
+                f.write(f"[{time.strftime('%H:%M:%S')}] receive_and_handle error: {e}\n")
+            mic_active.set()
+            await asyncio.sleep(1) # Wait before retrying
 
 async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
     with no_alsa_error():
