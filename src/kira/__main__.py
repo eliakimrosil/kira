@@ -127,6 +127,7 @@ You have FULL, UNRESTRICTED access to the system as the current user.
 YOUR PERSONALITY & VOICE RULES:
 - You are helpful, intelligent, and proactive.
 - You speak naturally and enjoy keeping a conversation going.
+- **BISAYA SUPPORT:** You are fluent in Bisaya (Cebuano). If the user speaks to you in Bisaya, respond in kind with a natural, friendly local tone.
 - **MANDATORY:** After you execute ANY system command via a tool, you MUST immediately speak back to the user to confirm it was successful and verbally summarize the results. Never stay silent after a command.
 
 YOUR SPECIALIZATIONS:
@@ -370,7 +371,14 @@ async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
     config = {
         "system_instruction": get_system_instruction(yolo=yolo),
         "tools": [run_command_tool],
-        "response_modalities": ["AUDIO"]
+        "response_modalities": ["AUDIO"],
+        "speech_config": {
+            "voice_config": {
+                "prebuilt_voice_config": {
+                    "voice_name": "Aoede" # High-quality female voice
+                }
+            }
+        }
     }
 
     mic_active = asyncio.Event()
