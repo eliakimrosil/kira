@@ -295,10 +295,8 @@ async def send_audio(session, mic_stream, mic_active):
             data = await asyncio.to_thread(mic_stream.read, CHUNK, exception_on_overflow=False)
             if mic_active.is_set():
                 try:
-                    await session.send(
-                        input=types.LiveClientRealtimeInput(
-                            audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
-                        )
+                    await session.send_realtime_input(
+                        audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
                     )
                 except Exception as e:
                     with open(LOG_FILE, "a") as f:
@@ -314,6 +312,9 @@ async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=
     """Receive audio and handle tool calls."""
     try:
         async for message in session.receive():
+            with open(LOG_FILE, "a") as f:
+                f.write(f"[{time.strftime('%H:%M:%S')}] Received message: {type(message)}\n")
+            
             # Handle Audio Output
             if message.server_content:
                 if message.server_content.model_turn:
