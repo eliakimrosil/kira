@@ -297,7 +297,7 @@ async def send_audio(session, mic_stream, mic_active):
                 try:
                     await session.send(
                         input=types.LiveClientRealtimeInput(
-                            media_chunks=[types.Blob(data=data, mime_type="audio/pcm;rate=16000")]
+                            audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
                         )
                     )
                 except Exception as e:
