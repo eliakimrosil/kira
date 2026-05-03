@@ -58,7 +58,7 @@ if not API_KEY or "your_api_key" in API_KEY:
     print("WARNING: GEMINI_API_KEY is not set correctly in .env file!")
     sys.exit(1)
 
-client = genai.Client(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY, http_options={'api_version': 'v1alpha'})
 
 # Audio configuration for Gemini Live
 FORMAT = pyaudio.paInt16
@@ -322,7 +322,7 @@ async def receive_and_handle(session, speaker_stream, yolo=True):
                         )
                     )
 
-async def run_live_session(yolo=True, model="gemini-2.5-flash"):
+async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
     with no_alsa_error():
         p = pyaudio.PyAudio()
     
@@ -380,7 +380,7 @@ def main():
     parser.add_argument("--voice", action="store_true", help="Enable Live Voice mode")
     parser.add_argument("--session", default="cli_default", help="Session ID for chat history")
     parser.add_argument("--model", default="gemini-2.5-flash", help="Gemini model to use for text")
-    parser.add_argument("--live-model", default="gemini-2.5-flash", help="Gemini model to use for Live Voice")
+    parser.add_argument("--live-model", default="gemini-3.1-flash-live-preview", help="Gemini model to use for Live Voice")
     
     args = parser.parse_args()
     
