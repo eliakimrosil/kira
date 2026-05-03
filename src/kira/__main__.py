@@ -286,38 +286,47 @@ def process_chat(session_id, user_text, yolo=True, screenshot=False, model="gemi
 
 # --- Voice / Live API Logic ---
 
-async def send_audio(session, mic_stream):
-    """Capture audio from mic and send to Gemini."""
+async def send_audio(session, mic_stream, mic_active):
+    """Capture audio from mic and send to Gemini if mic is active."""
     try:
         while True:
+            # Always read to keep the buffer clean
             data = await asyncio.to_thread(mic_stream.read, CHUNK, exception_on_overflow=False)
-            await session.send_realtime_input(
-                audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
-            )
+            if mic_active.is_set():
+                await session.send_realtime_input(
+                    audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
+                )
+            else:
+                await asyncio.sleep(0.01)
     except Exception as e:
         pass
 
-async def receive_and_handle(session, speaker_stream, live_ui, yolo=True):
+async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=True):
     """Receive audio and handle tool calls."""
     async for message in session.receive():
         # Handle Audio Output
         if message.server_content and message.server_content.model_turn:
+            mic_active.clear() # Stop listening while Kira speaks
             live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
             parts = message.server_content.model_turn.parts
             for part in parts:
                 if part.inline_data:
                     await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+            
+            # Briefly stay muted after speaking to avoid immediate feedback
+            await asyncio.sleep(0.5)
+            mic_active.set() # Resume listening
             live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
         
         # Handle Tool Calls
         if message.tool_call:
+            mic_active.clear() # Mute during command execution
             for call in message.tool_call.function_calls:
                 if call.name == "run_command":
                     cmd = call.args.get("command")
                     live_ui.update(Panel(f"[bold yellow]Executing:[/bold yellow] {cmd}", title="kira Live"))
                     res = run_command(cmd)
                     
-                    # Update UI to show we are waiting for kira to speak
                     live_ui.update(Panel("[bold magenta]Processing results...[/bold magenta]", title="kira Live"))
                     
                     await session.send(
@@ -364,12 +373,15 @@ async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
         "response_modalities": ["AUDIO"]
     }
 
+    mic_active = asyncio.Event()
+    mic_active.set()
+
     try:
         async with client.aio.live.connect(model=model, config=config) as session:
             with Live(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"), console=console, refresh_per_second=10) as live_ui:
                 await asyncio.gather(
-                    send_audio(session, mic_stream),
-                    receive_and_handle(session, speaker_stream, live_ui, yolo=yolo)
+                    send_audio(session, mic_stream, mic_active),
+                    receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=yolo)
                 )
     except Exception as e:
         console.print(f"[bold red]Live Session Error:[/bold red] {e}")
