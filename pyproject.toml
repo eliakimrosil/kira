@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kira"
+version = "0.1.0"
+authors = [
+  { name="Master Kim", email="your-email@example.com" },
+]
+description = "Kira: A specialized expert in Arch Linux and Hyprland"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "google-genai",
+    "python-dotenv",
+    "rich",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/eliakimrosil/Kira"
+"Bug Tracker" = "https://github.com/eliakimrosil/Kira/issues"
+
+[project.scripts]
+kira = "kira.__main__:main"

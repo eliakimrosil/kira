@@ -1,0 +1,42 @@
+# Maintainer: Master Kim <your-email@example.com>
+pkgname=kira
+_pkgname=kira
+pkgver=0.1.0.r0
+pkgrel=1
+pkgdesc="Kira: A specialized expert in Arch Linux and Hyprland"
+arch=('any')
+url="https://github.com/eliakimrosil/Kira"
+license=('MIT')
+depends=('python')
+optdepends=('grim: for screenshot support'
+            'hyprland: for window management integration'
+            'mpv: for music playback'
+            'python-dotenv: for environment variable support'
+            'python-google-genai: for Gemini AI integration')
+makedepends=('git' 'python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+source=("$_pkgname-repo::git+$url.git")
+md5sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname-repo"
+  ( set -o pipefail
+    git describe --long --tags 2>/dev/null | sed 's/\([^-]*-g\)/r\1/;s/-/./g' ||
+    printf "0.1.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  )
+}
+
+build() {
+  cd "$_pkgname-repo"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$_pkgname-repo"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  # Install the .env.example as a reference
+  install -Dm644 .env.example "$pkgdir/usr/share/$_pkgname/.env.example"
+
+  # Install the License
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

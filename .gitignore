@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Environment
+.env
+history.json
+memories.json
+live_logs.txt
+
+# OS
+.DS_Store
