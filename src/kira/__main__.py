@@ -323,7 +323,7 @@ async def receive_and_handle(session, speaker_stream, live_ui, yolo=True):
                     await session.send(
                         input=types.LiveClientToolResponse(
                             function_responses=[
-                                types.LiveClientFunctionResponse(
+                                types.FunctionResponse(
                                     name=call.name,
                                     id=call.id,
                                     response={"output": f"STDOUT: {res['stdout']}\nSTDERR: {res['stderr']}"}
