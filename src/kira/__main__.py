@@ -10,12 +10,30 @@ import readline
 import time
 import asyncio
 import pyaudio
+import ctypes
+from contextlib import contextmanager
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
+
+# Suppress ALSA/JACK errors
+ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+@contextmanager
+def no_alsa_error():
+    try:
+        asound = ctypes.cdll.LoadLibrary('libasound.so.2')
+        asound.snd_lib_error_set_handler(c_error_handler)
+        yield
+        asound.snd_lib_error_set_handler(None)
+    except:
+        yield
 
 console = Console()
 
@@ -304,12 +322,14 @@ async def receive_and_handle(session, speaker_stream, yolo=True):
                         )
                     )
 
-async def run_live_session(yolo=True, model="gemini-2.0-flash-exp"):
-    p = pyaudio.PyAudio()
+async def run_live_session(yolo=True, model="gemini-2.5-flash"):
+    with no_alsa_error():
+        p = pyaudio.PyAudio()
     
     # Open streams
-    mic_stream = p.open(format=FORMAT, channels=CHANNELS, rate=INPUT_RATE, input=True, frames_per_buffer=CHUNK)
-    speaker_stream = p.open(format=FORMAT, channels=CHANNELS, rate=OUTPUT_RATE, output=True)
+    with no_alsa_error():
+        mic_stream = p.open(format=FORMAT, channels=CHANNELS, rate=INPUT_RATE, input=True, frames_per_buffer=CHUNK)
+        speaker_stream = p.open(format=FORMAT, channels=CHANNELS, rate=OUTPUT_RATE, output=True)
 
     # Define tools for the Live API
     run_command_tool = types.Tool(
@@ -360,7 +380,7 @@ def main():
     parser.add_argument("--voice", action="store_true", help="Enable Live Voice mode")
     parser.add_argument("--session", default="cli_default", help="Session ID for chat history")
     parser.add_argument("--model", default="gemini-2.5-flash", help="Gemini model to use for text")
-    parser.add_argument("--live-model", default="gemini-2.0-flash-exp", help="Gemini model to use for Live Voice")
+    parser.add_argument("--live-model", default="gemini-2.5-flash", help="Gemini model to use for Live Voice")
     
     args = parser.parse_args()
     
