@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
+from rich.panel import Panel
 
 # Suppress ALSA/JACK errors
 ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)
@@ -123,6 +124,11 @@ def get_system_instruction(yolo=True):
 You are kira, a specialized expert in Arch Linux and the Hyprland window manager.
 You have FULL, UNRESTRICTED access to the system as the current user.
 
+YOUR PERSONALITY:
+- You are helpful, intelligent, and proactive.
+- You speak naturally and enjoy keeping a conversation going.
+- You are not just a tool, you are a personal assistant.
+
 YOUR SPECIALIZATIONS:
 1. Arch Linux: Expert in pacman, AUR (yay/paru), systemd, and Arch maintenance.
 2. Hyprland: Expert in Hyprland configuration and the 'hyprctl' utility.
@@ -143,7 +149,7 @@ CURRENT SYSTEM CONTEXT:
 GOAL:
 - Help the user manage and optimize their environment.
 - {yolo_instruction}
-- BE CONCISE but helpful.
+- BE CONCISE, HELPFUL, and CONVERSATIONAL.
 - Since you are running in a terminal, use markdown formatting where appropriate.
 
 COMMAND EXECUTION:
@@ -289,27 +295,28 @@ async def send_audio(session, mic_stream):
                 audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
             )
     except Exception as e:
-        console.print(f"[red]Audio capture error: {e}[/red]")
+        pass
 
-async def receive_and_handle(session, speaker_stream, yolo=True):
-    """Receive audio and handle tool calls (function calling)."""
+async def receive_and_handle(session, speaker_stream, live_ui, yolo=True):
+    """Receive audio and handle tool calls."""
     async for message in session.receive():
         # Handle Audio Output
         if message.server_content and message.server_content.model_turn:
+            live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
             parts = message.server_content.model_turn.parts
             for part in parts:
                 if part.inline_data:
                     await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+            live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
         
-        # Handle Tool Calls (Function Calling)
+        # Handle Tool Calls
         if message.tool_call:
             for call in message.tool_call.function_calls:
                 if call.name == "run_command":
                     cmd = call.args.get("command")
-                    console.print(f"\n[bold green][Voice Command][/bold green] [cyan]{cmd}[/cyan]...")
+                    live_ui.update(Panel(f"[bold yellow]Executing:[/bold yellow] {cmd}", title="kira Live"))
                     res = run_command(cmd)
                     
-                    # Feed result back to the AI
                     await session.send(
                         input=types.LiveClientToolResponse(
                             function_responses=[
@@ -331,7 +338,7 @@ async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
         mic_stream = p.open(format=FORMAT, channels=CHANNELS, rate=INPUT_RATE, input=True, frames_per_buffer=CHUNK)
         speaker_stream = p.open(format=FORMAT, channels=CHANNELS, rate=OUTPUT_RATE, output=True)
 
-    # Define tools for the Live API
+    # Define tools
     run_command_tool = types.Tool(
         function_declarations=[
             types.FunctionDeclaration(
@@ -356,12 +363,11 @@ async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
 
     try:
         async with client.aio.live.connect(model=model, config=config) as session:
-            console.print("[bold green]Connected to kira Live. Start speaking...[/bold green] (Ctrl+C to stop)")
-            
-            await asyncio.gather(
-                send_audio(session, mic_stream),
-                receive_and_handle(session, speaker_stream, yolo=yolo)
-            )
+            with Live(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"), console=console, refresh_per_second=10) as live_ui:
+                await asyncio.gather(
+                    send_audio(session, mic_stream),
+                    receive_and_handle(session, speaker_stream, live_ui, yolo=yolo)
+                )
     except Exception as e:
         console.print(f"[bold red]Live Session Error:[/bold red] {e}")
     finally:
