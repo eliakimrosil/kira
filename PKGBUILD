@@ -1,7 +1,7 @@
 # Maintainer: Master Kim <your-email@example.com>
 pkgname=kira
 _pkgname=kira
-pkgver=0.1.0.r0
+pkgver=0.1.0.r2.gd73847d
 pkgrel=1
 pkgdesc="kira: a specialized expert in Arch Linux and Hyprland"
 arch=('any')
@@ -12,7 +12,8 @@ optdepends=('grim: for screenshot support'
             'hyprland: for window management integration'
             'mpv: for music playback'
             'python-dotenv: for environment variable support'
-            'python-google-genai: for Gemini AI integration')
+            'python-google-genai: for Gemini AI integration'
+            'python-pyaudio: for voice command support')
 makedepends=('git' 'python-build' 'python-installer' 'python-setuptools' 'python-wheel')
 source=("$_pkgname-repo::git+$url.git")
 md5sums=('SKIP')
