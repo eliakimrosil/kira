@@ -8,7 +8,7 @@ version = "0.1.0"
 authors = [
   { name="Master Kim", email="your-email@example.com" },
 ]
-description = "Kira: A specialized expert in Arch Linux and Hyprland"
+description = "kira: a specialized expert in Arch Linux and Hyprland"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -23,8 +23,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/eliakimrosil/Kira"
-"Bug Tracker" = "https://github.com/eliakimrosil/Kira/issues"
+"Homepage" = "https://github.com/eliakimrosil/kira"
+"Bug Tracker" = "https://github.com/eliakimrosil/kira/issues"
 
 [project.scripts]
 kira = "kira.__main__:main"

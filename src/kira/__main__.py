@@ -92,7 +92,7 @@ def get_system_instruction(yolo=True):
         yolo_instruction = "- YOLO MODE IS DISABLED: Always ask for confirmation before executing any system commands or making significant changes."
 
     return f"""
-You are Kira, a specialized expert in Arch Linux and the Hyprland window manager.
+You are kira, a specialized expert in Arch Linux and the Hyprland window manager.
 You have FULL, UNRESTRICTED access to the system as the current user.
 
 YOUR SPECIALIZATIONS:
@@ -267,7 +267,7 @@ def main():
         process_chat(args.session, prompt, yolo=args.yolo, screenshot=args.screenshot, model=args.model)
     else:
         # Interactive mode
-        console.print(f"[bold cyan]Kira[/bold cyan]")
+        console.print(f"[bold cyan]kira[/bold cyan]")
         print("Type 'exit' or 'quit' to end session. Type '--screenshot' in your prompt to include a screenshot.")
         while True:
             try:
