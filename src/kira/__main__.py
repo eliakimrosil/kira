@@ -314,6 +314,15 @@ async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=
     """Receive audio and handle tool calls."""
     try:
         async for message in session.receive():
+            # Debug logging
+            msg_type = "unknown"
+            if message.server_content: msg_type = "server_content"
+            if message.tool_call: msg_type = "tool_call"
+            if message.setup: msg_type = "setup"
+            
+            with open(LOG_FILE, "a") as f:
+                f.write(f"[{time.strftime('%H:%M:%S')}] Msg: {msg_type} | Mic: {mic_active.is_set()}\n")
+            
             # Handle Audio Output
             if message.server_content:
                 if message.server_content.model_turn:
@@ -333,25 +342,28 @@ async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=
             # Handle Tool Calls
             if message.tool_call:
                 mic_active.clear() # Mute during command execution
+                responses = []
                 for call in message.tool_call.function_calls:
                     if call.name == "run_command":
                         cmd = call.args.get("command")
                         live_ui.update(Panel(f"[bold yellow]Executing:[/bold yellow] {cmd}", title="kira Live"))
                         res = run_command(cmd)
-                        
-                        live_ui.update(Panel("[bold magenta]Processing results...[/bold magenta]", title="kira Live"))
-                        
-                        await session.send(
-                            input=types.LiveClientToolResponse(
-                                function_responses=[
-                                    types.FunctionResponse(
-                                        name=call.name,
-                                        id=call.id,
-                                        response={"output": f"STDOUT: {res['stdout']}\nSTDERR: {res['stderr']}"}
-                                    )
-                                ]
+                        responses.append(
+                            types.FunctionResponse(
+                                name=call.name,
+                                id=call.id,
+                                response={"output": f"STDOUT: {res['stdout']}\nSTDERR: {res['stderr']}"}
                             )
                         )
+                
+                if responses:
+                    live_ui.update(Panel("[bold magenta]Processing results...[/bold magenta]", title="kira Live"))
+                    await session.send(
+                        input=types.LiveClientToolResponse(function_responses=responses)
+                    )
+                else:
+                    # If no tools were actually run, re-enable mic
+                    mic_active.set()
     except Exception as e:
         with open(LOG_FILE, "a") as f:
             f.write(f"[{time.strftime('%H:%M:%S')}] receive_and_handle error: {e}\n")
