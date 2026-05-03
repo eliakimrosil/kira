@@ -66,7 +66,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 INPUT_RATE = 16000  # Gemini expects 16kHz input
 OUTPUT_RATE = 24000 # Gemini outputs 24kHz
-CHUNK = 512         # Small chunks for low latency
+CHUNK = 1024        # Increased for better stability
 
 # Cache for static system info
 SYSTEM_CACHE = {
@@ -306,18 +306,20 @@ async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=
     """Receive audio and handle tool calls."""
     async for message in session.receive():
         # Handle Audio Output
-        if message.server_content and message.server_content.model_turn:
-            mic_active.clear() # Stop listening while Kira speaks
-            live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
-            parts = message.server_content.model_turn.parts
-            for part in parts:
-                if part.inline_data:
-                    await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+        if message.server_content:
+            if message.server_content.model_turn:
+                mic_active.clear() # Stop listening while Kira speaks
+                live_ui.update(Panel("[bold green]kira is speaking...[/bold green]", title="kira Live"))
+                parts = message.server_content.model_turn.parts
+                for part in parts:
+                    if part.inline_data:
+                        await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
             
-            # Briefly stay muted after speaking to avoid immediate feedback
-            await asyncio.sleep(0.5)
-            mic_active.set() # Resume listening
-            live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
+            if message.server_content.turn_complete:
+                # Briefly stay muted after speaking to avoid immediate feedback
+                await asyncio.sleep(0.2)
+                mic_active.set() # Resume listening
+                live_ui.update(Panel("[bold cyan]Listening...[/bold cyan]", title="kira Live"))
         
         # Handle Tool Calls
         if message.tool_call:
