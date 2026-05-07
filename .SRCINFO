@@ -2,7 +2,7 @@ pkgbase = kira
 	pkgdesc = kira: a specialized expert in Arch Linux and Hyprland
 	pkgver = 0.1.0.r23.g647ac75
 	pkgrel = 1
-	url = https://github.com/eliakimrosil/kira
+	url = https://github.com/eliakimrosil/Kira
 	arch = any
 	license = MIT
 	makedepends = git
@@ -19,7 +19,7 @@ pkgbase = kira
 	optdepends = hyprland: for window management integration
 	optdepends = mpv: for music playback
 	optdepends = bluez-utils: for bluetooth management
-	source = kira-git::git+https://github.com/eliakimrosil/kira.git
+	source = kira-git::git+https://github.com/eliakimrosil/Kira.git
 	md5sums = SKIP
 
 pkgname = kira

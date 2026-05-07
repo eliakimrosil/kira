@@ -20,21 +20,32 @@ from rich.markdown import Markdown
 from rich.live import Live
 from rich.panel import Panel
 
-# Suppress ALSA/JACK errors
-ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)
-def py_error_handler(filename, line, function, err, fmt):
-    pass
-c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
-
+# Suppress ALSA/JACK/PortAudio noisy errors
 @contextmanager
-def no_alsa_error():
+def no_audio_errors():
+    """Silences noisy C libraries like ALSA and JACK by redirecting stderr."""
+    # Attempt to suppress ALSA specifically first
     try:
+        ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)
+        def py_error_handler(filename, line, function, err, fmt): pass
+        c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
         asound = ctypes.cdll.LoadLibrary('libasound.so.2')
         asound.snd_lib_error_set_handler(c_error_handler)
-        yield
-        asound.snd_lib_error_set_handler(None)
     except:
+        asound = None
+
+    # Comprehensive stderr redirection
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    old_stderr = os.dup(sys.stderr.fileno())
+    try:
+        os.dup2(devnull, sys.stderr.fileno())
         yield
+    finally:
+        os.dup2(old_stderr, sys.stderr.fileno())
+        os.close(devnull)
+        os.close(old_stderr)
+        if asound:
+            asound.snd_lib_error_set_handler(None)
 
 console = Console()
 
@@ -356,11 +367,11 @@ async def receive_and_handle(session, speaker_stream, live_ui, mic_active, yolo=
             await asyncio.sleep(1) # Wait before retrying
 
 async def run_live_session(yolo=True, model="gemini-3.1-flash-live-preview"):
-    with no_alsa_error():
+    with no_audio_errors():
         p = pyaudio.PyAudio()
     
     # Open streams
-    with no_alsa_error():
+    with no_audio_errors():
         mic_stream = p.open(format=FORMAT, channels=CHANNELS, rate=INPUT_RATE, input=True, frames_per_buffer=CHUNK)
         speaker_stream = p.open(format=FORMAT, channels=CHANNELS, rate=OUTPUT_RATE, output=True)
 
