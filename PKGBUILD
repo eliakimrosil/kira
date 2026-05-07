@@ -1,16 +1,18 @@
-# Maintainer: Master Kim <your-email@example.com>
+# Maintainer: Master Kim <eliakimrosilarts@gmail.com>
 pkgname=kira
 _pkgname=kira
-pkgver=0.1.0.r20.ge9bfb8b
-pkgrel=3
+pkgver=0.1.0.r37.g58395d2
+pkgrel=1
 pkgdesc="kira: a specialized expert in Arch Linux and Hyprland"
 arch=('any')
 url="https://github.com/eliakimrosil/kira"
 license=('MIT')
-depends=('python' 'python-pyaudio' 'python-dotenv' 'python-google-genai')
+depends=('python' 'python-pyaudio' 'python-dotenv' 'python-rich')
 optdepends=('grim: for screenshot support'
+            'slurp: for region selection in screenshots'
             'hyprland: for window management integration'
-            'mpv: for music playback')
+            'mpv: for music playback'
+            'bluez-utils: for bluetooth management')
 makedepends=('git' 'python-build' 'python-installer' 'python-setuptools' 'python-wheel')
 source=("$_pkgname-repo::git+$url.git")
 md5sums=('SKIP')

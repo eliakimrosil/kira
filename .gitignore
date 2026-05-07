@@ -8,10 +8,20 @@ build/
 dist/
 *.egg-info/
 
-# Environment
+# Arch Linux packaging
+/pkg/
+/src/
+/kira-repo/
+*.pkg.tar.zst
+*.pkg.tar.xz
+*.pkg.tar.gz
+*.src.tar.gz
+.SRCINFO
+
+# Environment and Logs
 .env
-history.json
-memories.json
+*.json
+!pyproject.toml
 live_logs.txt
 
 # OS
