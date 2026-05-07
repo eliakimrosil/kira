@@ -10,7 +10,8 @@ dist/
 
 # Arch Linux packaging
 /pkg/
-/src/
+/kira-git/
+/src/kira-git/
 /kira-repo/
 *.pkg.tar.zst
 *.pkg.tar.xz
